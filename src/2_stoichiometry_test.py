@@ -61,7 +61,7 @@ for tp_folder in timepoint_folders:
                 client_trajectories=pd.read_csv(client_traj)
                 client_trajectories.columns = [str(col) + '_client' for col in client_trajectories.columns]
         
-        new=[]
+        
         for item in hsp_trajectories:
             trajectory_hsp=hsp_trajectories[[item]]
             hspnumber=item.split('_')[1]
@@ -72,12 +72,38 @@ for tp_folder in timepoint_folders:
                     newtraj=trajectory_hsp.join(client_trajectory)
                     newtraj=newtraj.T
                     newtraj['path_info']=trajec_test=trajectory.split('/')[-3:-1]
-                    
+                    newtraj=newtraj.reset_index().rename(columns={'index':'molecule_number'})
                     new.append(newtraj)
+                    
+        
+        timepoint_columns = [col for col in newtraj.columns.tolist() if col not in ['molecule_number','path_info']]
+
+        
+        molecule_counts = []
+        for molecule, df in newtraj.groupby('molecule_number'):
+            if 'hsp' in molecule:
+                # coords_hsp=df['coords'].values[0]    
+                hsp_max_fluorescence_value = df[timepoint_columns].iloc[:,0:3].values.mean()
+                # Calculate average number of molecules by mean fluorescence / step size
+                molecule_count_hsp=hsp_max_fluorescence_value/int(step_sizes_hsp['step_size'].values[step_sizes_hsp['step_type']=='last_step'])
+                molecule_counts.append(pd.DataFrame([molecule, hsp_max_fluorescence_value, molecule_count_hsp]).T)
+                #max_fluorescence_value = np.max(sorted(df[timepoint_columns].values[0], reverse=True))
+
+            if 'client' in molecule:
+                # coords_client=df['coords'].values[0]        
+                client_max_fluorescence_value = df[timepoint_columns].iloc[:,0:3].values.mean()
+                molecule_count_client=client_max_fluorescence_value/int(step_sizes_client['step_size'].values[step_sizes_client['step_type']=='last_step'])
+                # Calculate average number of molecules by mean fluorescence / step size
+                molecule_counts.append([molecule, client_max_fluorescence_value, molecule_count_client])
+                
+        molecule_counts = pd.concat(molecule_counts)
+        molecule_counts.columns = ['molecule_number', 'max_fluorescence', 'molecule_count']
+
+                
 
 
-        new=pd.concat(new).reset_index().rename(columns={'index':'molecule_number'})
-
+    
+    # newtraj=pd.concat(newtraj).reset_index().rename(columns={'index':'molecule_number'})
 
 
 #grab the first column in each trajectories dataframe, and assign them one molecule name/number (perhaps their xy co-ordinates? + metadata). 
