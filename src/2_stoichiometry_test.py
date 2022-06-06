@@ -74,19 +74,21 @@ for tp_folder in timepoint_folders:
                     newtraj['path_info']=trajec_test=trajectory.split('/')[-3:-1]
                     newtraj=newtraj.reset_index().rename(columns={'index':'molecule_number'})
                     new.append(newtraj)
-                    
-        
-        timepoint_columns = [col for col in newtraj.columns.tolist() if col not in ['molecule_number','path_info']]
+
+            #NOTE: FOR HACKY HOUR: WHY CAN'T I CONCAT INTO NEW? iT WORKS WHEN I DO THIS WITHIN THE FOR LOOP, BUT NOT WHEN i RUN THE WHOLE THING FROM THE TOP        
+        new=pd.concat(new)
+
+        timepoint_columns = [col for col in new.columns.tolist() if col not in ['molecule_number','path_info']]
 
         
         molecule_counts = []
-        for molecule, df in newtraj.groupby('molecule_number'):
+        for molecule, df in new.groupby('molecule_number'):
             if 'hsp' in molecule:
                 # coords_hsp=df['coords'].values[0]    
                 hsp_max_fluorescence_value = df[timepoint_columns].iloc[:,0:3].values.mean()
                 # Calculate average number of molecules by mean fluorescence / step size
                 molecule_count_hsp=hsp_max_fluorescence_value/int(step_sizes_hsp['step_size'].values[step_sizes_hsp['step_type']=='last_step'])
-                molecule_counts.append(pd.DataFrame([molecule, hsp_max_fluorescence_value, molecule_count_hsp]).T)
+                molecule_counts.append(pd.DataFrame([molecule, hsp_max_fluorescence_value, molecule_count_hsp, str(df['path_info'].values)]).T)
                 #max_fluorescence_value = np.max(sorted(df[timepoint_columns].values[0], reverse=True))
 
             if 'client' in molecule:
@@ -94,10 +96,12 @@ for tp_folder in timepoint_folders:
                 client_max_fluorescence_value = df[timepoint_columns].iloc[:,0:3].values.mean()
                 molecule_count_client=client_max_fluorescence_value/int(step_sizes_client['step_size'].values[step_sizes_client['step_type']=='last_step'])
                 # Calculate average number of molecules by mean fluorescence / step size
-                molecule_counts.append([molecule, client_max_fluorescence_value, molecule_count_client])
+                molecule_counts.append(pd.DataFrame([molecule, client_max_fluorescence_value, molecule_count_client, str(df['path_info'].values)]).T)
                 
         molecule_counts = pd.concat(molecule_counts)
-        molecule_counts.columns = ['molecule_number', 'max_fluorescence', 'molecule_count']
+        molecule_counts.columns = ['molecule_number', 'max_fluorescence', 'molecule_count', 'path_info']
+        trajectories.append(molecule_counts)
+
 
                 
 
